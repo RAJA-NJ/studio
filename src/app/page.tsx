@@ -46,7 +46,7 @@ export default function LoginPage() {
           <div className="p-3 bg-primary/10 rounded-2xl">
             <Activity className="h-10 w-10 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">HealthLink Hub</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">IHSS</h1>
           <p className="text-muted-foreground">Comprehensive Medical Portal for Everyone</p>
         </div>
 

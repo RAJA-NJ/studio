@@ -23,7 +23,7 @@ export function Navbar() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Activity className="h-6 w-6 text-primary" />
-          <span className="font-bold text-xl tracking-tight">HealthLink Hub</span>
+          <span className="font-bold text-xl tracking-tight">IHSS</span>
         </div>
 
         <div className="flex items-center gap-4">

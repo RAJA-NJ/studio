@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { AppStoreProvider } from "@/app/lib/store";
 
 export const metadata: Metadata = {
-  title: 'HealthLink Hub',
+  title: 'IHSS',
   description: 'Connected healthcare for patients and doctors',
 };
 
