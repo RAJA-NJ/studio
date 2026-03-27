@@ -13,7 +13,7 @@ import {
   ClipboardList, 
   MessageCircle, 
   Trash2, 
-  ChevronRight, 
+  ChevronDown, 
   FileText, 
   Sparkles,
   Search,
@@ -110,9 +110,6 @@ export default function DoctorDashboard() {
     a.doctorId === currentUser?.id && a.status === "pending" && !a.isEmergency
   ), [appointments, currentUser]);
 
-  const selectedPatient = useMemo(() => myPatients.find(p => p.id === selectedPatientId), [myPatients, selectedPatientId]);
-  const patientReports = useMemo(() => reports.filter(r => r.patientId === selectedPatientId), [reports, selectedPatientId]);
-  
   const handleCreatePatient = (e: React.FormEvent) => {
     e.preventDefault();
     createPatient({ 
@@ -264,184 +261,180 @@ export default function DoctorDashboard() {
             </Dialog>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 space-y-4">
-              {myPatients.length === 0 ? (
-                <div className="text-center py-20 border-2 border-dashed rounded-xl">
-                  <p className="text-muted-foreground">No patients assigned yet.</p>
-                </div>
-              ) : (
-                myPatients.map(p => (
-                  <button 
-                    key={p.id}
-                    onClick={() => setSelectedPatientId(p.id)}
-                    className={cn(
-                      "w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between group",
-                      selectedPatientId === p.id ? "bg-primary/5 border-primary shadow-sm" : "bg-card hover:bg-muted/50"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
-                        {p.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm">{p.name}</p>
-                        <p className="text-xs text-muted-foreground">ID: {p.username}</p>
-                      </div>
-                    </div>
-                    <ChevronRight className={cn("h-4 w-4 transition-transform", selectedPatientId === p.id ? "rotate-90" : "group-hover:translate-x-1")} />
-                  </button>
-                ))
-              )}
-            </div>
+          <div className="space-y-4">
+            {myPatients.length === 0 ? (
+              <div className="text-center py-20 border-2 border-dashed rounded-xl">
+                <p className="text-muted-foreground">No patients assigned yet.</p>
+              </div>
+            ) : (
+              myPatients.map(p => {
+                const isExpanded = selectedPatientId === p.id;
+                const patientReports = reports.filter(r => r.patientId === p.id);
 
-            <div className="lg:col-span-2">
-              {selectedPatient ? (
-                <div className="space-y-6 animate-in fade-in duration-300">
-                  <Card className="border-none shadow-md overflow-hidden">
-                    <CardHeader className="bg-primary/5 pb-6">
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-4">
-                          <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-2xl font-bold text-primary shadow-sm">
-                            {selectedPatient.name.charAt(0)}
-                          </div>
-                          <div>
-                            <CardTitle className="text-2xl">{selectedPatient.name}</CardTitle>
-                            <CardDescription className="flex items-center gap-2">
-                              Patient ID: {selectedPatient.username}
-                              <span className="inline-block h-1 w-1 rounded-full bg-muted-foreground" />
-                              <span className="text-green-600 flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-green-500" /> Online</span>
-                            </CardDescription>
-                          </div>
+                return (
+                  <div key={p.id} className="space-y-2">
+                    <button 
+                      onClick={() => setSelectedPatientId(isExpanded ? null : p.id)}
+                      className={cn(
+                        "w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between group",
+                        isExpanded ? "bg-primary/5 border-primary shadow-sm" : "bg-card hover:bg-muted/50"
+                      )}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                          {p.name.charAt(0)}
                         </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" className="gap-2" onClick={() => {
-                            const newPass = prompt("Enter new password for patient:");
-                            if (newPass) updatePatientPassword(selectedPatient.id, newPass);
-                          }}>
-                            <Key className="h-4 w-4" /> Reset Pwd
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => {
-                            if (confirm("Are you sure you want to delete this patient?")) {
-                              deletePatient(selectedPatient.id);
-                              setSelectedPatientId(null);
-                            }
-                          }}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <div>
+                          <p className="font-semibold text-sm">{p.name}</p>
+                          <p className="text-xs text-muted-foreground">ID: {p.username}</p>
                         </div>
                       </div>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                          <h3 className="font-semibold flex items-center gap-2">
-                            <ClipboardList className="h-4 w-4 text-primary" />
-                            Clinical Notes
-                          </h3>
-                          <Textarea 
-                            placeholder="Add consultation notes, diagnosis, or instructions..." 
-                            className="min-h-[150px]"
-                            value={visitNotes}
-                            onChange={(e) => setVisitNotes(e.target.value)}
-                          />
-                          <Button 
-                            className="w-full" 
-                            disabled={!visitNotes.trim()}
-                            onClick={() => {
-                              const lastAppt = appointments.find(a => a.patientId === selectedPatient.id && a.status === "approved");
-                              if (lastAppt) {
-                                markVisited(lastAppt.id, visitNotes);
-                                setVisitNotes("");
-                                toast({ title: "Visit Logged", description: "Checkup history updated." });
-                              } else {
-                                toast({ variant: "destructive", title: "Error", description: "No approved appointment found to log visit." });
-                              }
-                            }}
-                          >
-                            Mark as Visited & Log Note
-                          </Button>
-                        </div>
-                        <div className="space-y-4">
-                          <h3 className="font-semibold flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-primary" />
-                            Patient File
-                          </h3>
-                          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-                            {patientReports.map(report => (
-                              <div key={report.id} className="p-3 bg-muted/30 rounded-xl text-sm flex items-center justify-between group/report border border-transparent hover:border-primary/20 hover:bg-white transition-all">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-1.5 bg-white rounded shadow-sm">
-                                    <FileText className="h-4 w-4 text-primary" />
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <span className="font-medium line-clamp-1">{report.title}</span>
-                                    <span className="text-[10px] text-muted-foreground">{format(new Date(report.date), "MMM d, yyyy")}</span>
-                                  </div>
+                      <ChevronDown className={cn("h-5 w-5 transition-transform duration-300", isExpanded ? "rotate-180" : "")} />
+                    </button>
+
+                    {isExpanded && (
+                      <div className="animate-in slide-in-from-top-2 duration-300">
+                        <Card className="border-none shadow-md overflow-hidden">
+                          <CardHeader className="bg-primary/5 pb-6">
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-2xl font-bold text-primary shadow-sm">
+                                  {p.name.charAt(0)}
                                 </div>
-                                <div className="flex items-center gap-1 opacity-0 group-hover/report:opacity-100 transition-opacity">
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingReport(report)}>
-                                    <Eye className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingReport(report)}>
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => setReportToDelete(report.id)}>
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
+                                <div>
+                                  <CardTitle className="text-2xl">{p.name}</CardTitle>
+                                  <CardDescription className="flex items-center gap-2">
+                                    Patient ID: {p.username}
+                                    <span className="inline-block h-1 w-1 rounded-full bg-muted-foreground" />
+                                    <span className="text-green-600 flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-green-500" /> Online</span>
+                                  </CardDescription>
                                 </div>
                               </div>
-                            ))}
-                            {patientReports.length === 0 && (
-                              <p className="text-xs text-center text-muted-foreground py-8 italic">No records in file.</p>
-                            )}
-                          </div>
-                          
-                          <Dialog open={isRecordDialogOpen} onOpenChange={setIsRecordDialogOpen}>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" className="w-full gap-2 border-dashed">
-                                <PlusCircle className="h-4 w-4" /> Add Record to File
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Add Record for {selectedPatient.name}</DialogTitle>
-                                <DialogDescription>Attach a diagnostic scan or a new prescription.</DialogDescription>
-                              </DialogHeader>
-                              <form onSubmit={handleRecordUpload} className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="title">Record Title</Label>
-                                  <Input id="title" name="title" placeholder="e.g. Lab Results 04/24" required />
+                              <div className="flex gap-2">
+                                <Button variant="outline" size="sm" className="gap-2" onClick={() => {
+                                  const newPass = prompt("Enter new password for patient:");
+                                  if (newPass) updatePatientPassword(p.id, newPass);
+                                }}>
+                                  <Key className="h-4 w-4" /> Reset Pwd
+                                </Button>
+                                <Button variant="destructive" size="sm" onClick={() => {
+                                  if (confirm("Are you sure you want to delete this patient?")) {
+                                    deletePatient(p.id);
+                                    setSelectedPatientId(null);
+                                  }
+                                }}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="pt-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <div className="space-y-4">
+                                <h3 className="font-semibold flex items-center gap-2">
+                                  <ClipboardList className="h-4 w-4 text-primary" />
+                                  Clinical Notes
+                                </h3>
+                                <Textarea 
+                                  placeholder="Add consultation notes, diagnosis, or instructions..." 
+                                  className="min-h-[150px]"
+                                  value={visitNotes}
+                                  onChange={(e) => setVisitNotes(e.target.value)}
+                                />
+                                <Button 
+                                  className="w-full" 
+                                  disabled={!visitNotes.trim()}
+                                  onClick={() => {
+                                    const lastAppt = appointments.find(a => a.patientId === p.id && a.status === "approved");
+                                    if (lastAppt) {
+                                      markVisited(lastAppt.id, visitNotes);
+                                      setVisitNotes("");
+                                      toast({ title: "Visit Logged", description: "Checkup history updated." });
+                                    } else {
+                                      toast({ variant: "destructive", title: "Error", description: "No approved appointment found to log visit." });
+                                    }
+                                  }}
+                                >
+                                  Mark as Visited & Log Note
+                                </Button>
+                              </div>
+                              <div className="space-y-4">
+                                <h3 className="font-semibold flex items-center gap-2">
+                                  <FileText className="h-4 w-4 text-primary" />
+                                  Patient File
+                                </h3>
+                                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                                  {patientReports.map(report => (
+                                    <div key={report.id} className="p-3 bg-muted/30 rounded-xl text-sm flex items-center justify-between group/report border border-transparent hover:border-primary/20 hover:bg-white transition-all">
+                                      <div className="flex items-center gap-3">
+                                        <div className="p-1.5 bg-white rounded shadow-sm">
+                                          <FileText className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                          <span className="font-medium line-clamp-1">{report.title}</span>
+                                          <span className="text-[10px] text-muted-foreground">{format(new Date(report.date), "MMM d, yyyy")}</span>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1 opacity-0 group-hover/report:opacity-100 transition-opacity">
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingReport(report)}>
+                                          <Eye className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingReport(report)}>
+                                          <Edit className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => setReportToDelete(report.id)}>
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {patientReports.length === 0 && (
+                                    <p className="text-xs text-center text-muted-foreground py-8 italic">No records in file.</p>
+                                  )}
                                 </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="type">Type</Label>
-                                  <Select name="type" defaultValue="scan" required>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="scan">Scan / Imaging</SelectItem>
-                                      <SelectItem value="prescription">Prescription</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <Button type="submit" className="w-full">Save to Patient Profile</Button>
-                              </form>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
+                                
+                                <Dialog open={isRecordDialogOpen} onOpenChange={setIsRecordDialogOpen}>
+                                  <DialogTrigger asChild>
+                                    <Button variant="outline" className="w-full gap-2 border-dashed">
+                                      <PlusCircle className="h-4 w-4" /> Add Record to File
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Add Record for {p.name}</DialogTitle>
+                                      <DialogDescription>Attach a diagnostic scan or a new prescription.</DialogDescription>
+                                    </DialogHeader>
+                                    <form onSubmit={handleRecordUpload} className="space-y-4 py-4">
+                                      <div className="space-y-2">
+                                        <Label htmlFor="title">Record Title</Label>
+                                        <Input id="title" name="title" placeholder="e.g. Lab Results 04/24" required />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label htmlFor="type">Type</Label>
+                                        <Select name="type" defaultValue="scan" required>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Select type" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="scan">Scan / Imaging</SelectItem>
+                                            <SelectItem value="prescription">Prescription</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <Button type="submit" className="w-full">Save to Patient Profile</Button>
+                                    </form>
+                                  </DialogContent>
+                                </Dialog>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center p-12 bg-muted/20 border-2 border-dashed rounded-xl">
-                  <Users className="h-16 w-16 text-muted-foreground mb-4 opacity-50" />
-                  <h3 className="text-xl font-medium text-muted-foreground">Select a patient</h3>
-                  <p className="text-sm text-muted-foreground">Click a patient from the sidebar to view their full history.</p>
-                </div>
-              )}
-            </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </TabsContent>
 
@@ -602,8 +595,8 @@ export default function DoctorDashboard() {
                 </div>
              </div>
              <div className="md:col-span-2">
-                {selectedPatient ? (
-                  <ChatModule otherUser={selectedPatient} />
+                {selectedPatientId ? (
+                  <ChatModule otherUser={users.find(u => u.id === selectedPatientId)} />
                 ) : (
                   <div className="h-[500px] flex items-center justify-center bg-muted/10 border-2 border-dashed rounded-xl">
                     <p className="text-muted-foreground">Select a patient to start chatting</p>
