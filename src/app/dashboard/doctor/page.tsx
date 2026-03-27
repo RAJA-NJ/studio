@@ -19,7 +19,8 @@ import {
   Search,
   CheckCircle,
   MoreVertical,
-  Key
+  Key,
+  AlertCircle
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -36,6 +37,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { doctorAidSuggestions } from "@/ai/flows/doctor-aid-suggestions";
+import { cn } from "@/lib/utils";
 
 export default function DoctorDashboard() {
   const { 
