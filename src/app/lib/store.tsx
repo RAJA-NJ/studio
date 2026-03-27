@@ -146,7 +146,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }, [currentUser]);
 
   const createDoctor = useCallback((doc: Omit<User, "id" | "role">) => {
-    const newUser: User = { ...doc, id: `u-${Date.now()}`, role: "doctor" };
+    const newUser: User = { ...doc, id: `u-${Date.now()}-${Math.floor(Math.random()*1000)}`, role: "doctor" };
     setUsers(prev => [...prev, newUser]);
   }, []);
 
@@ -160,7 +160,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   const createPatient = useCallback((pat: Omit<User, "id" | "role" | "doctorId">) => {
     if (!currentUser || currentUser.role !== "doctor") return;
-    const newUser: User = { ...pat, id: `u-${Date.now()}`, role: "patient", doctorId: currentUser.id };
+    const newUser: User = { ...pat, id: `u-${Date.now()}-${Math.floor(Math.random()*1000)}`, role: "patient", doctorId: currentUser.id };
     setUsers(prev => [...prev, newUser]);
   }, [currentUser]);
 
@@ -191,7 +191,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     }
 
     const newReport: Report = {
-      id: `r-${Date.now()}`,
+      id: `r-${Date.now()}-${Math.floor(Math.random()*1000)}`,
       patientId,
       doctorId,
       title,
@@ -213,7 +213,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const bookAppointment = useCallback((doctorId: string, date: string) => {
     if (!currentUser) return;
     const newAppt: Appointment = {
-      id: `a-${Date.now()}`,
+      id: `a-${Date.now()}-${Math.floor(Math.random()*1000)}`,
       patientId: currentUser.id,
       doctorId,
       date,
@@ -225,7 +225,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const reportIssueToAdmin = useCallback((description: string) => {
     if (!currentUser) return;
     const newIssue: AdminIssue = {
-      id: `i-${Date.now()}`,
+      id: `i-${Date.now()}-${Math.floor(Math.random()*1000)}`,
       patientId: currentUser.id,
       description,
       date: new Date().toISOString()
@@ -236,7 +236,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const sendMessage = useCallback((toId: string, text: string) => {
     if (!currentUser) return;
     const newMessage: Message = {
-      id: `m-${Date.now()}`,
+      id: `m-${Date.now()}-${Math.floor(Math.random()*1000)}`,
       fromId: currentUser.id,
       toId,
       text,
