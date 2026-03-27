@@ -16,10 +16,12 @@ import {
   Search,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  File as FileIcon,
+  X
 } from "lucide-react";
 import { ChatModule } from "@/components/dashboard/ChatModule";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +40,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export default function PatientDashboard() {
   const { 
@@ -56,6 +59,8 @@ export default function PatientDashboard() {
   const [issue, setIssue] = useState("");
   const [apptDate, setApptDate] = useState("");
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const assignedDoctor = users.find(u => u.id === currentUser?.doctorId);
   const myAppointments = appointments.filter(a => a.patientId === currentUser?.id);
@@ -85,6 +90,12 @@ export default function PatientDashboard() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
   const handleUploadSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -92,9 +103,18 @@ export default function PatientDashboard() {
     const type = formData.get('type') as 'scan' | 'prescription';
     
     if (title && type && currentUser) {
+      // In a real app, we'd upload the 'selectedFile' to storage here
       uploadFileForPatient(currentUser.id, title, 'https://example.com/file.pdf', type);
       setIsUploadDialogOpen(false);
+      setSelectedFile(null);
       toast({ title: "Record Uploaded", description: "Your doctor can now view this record." });
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setSelectedFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -300,7 +320,10 @@ export default function PatientDashboard() {
                 <CardTitle>Medical Records</CardTitle>
                 <CardDescription>View reports, scans, and prescriptions</CardDescription>
               </div>
-              <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+              <Dialog open={isUploadDialogOpen} onOpenChange={(open) => {
+                setIsUploadDialogOpen(open);
+                if (!open) setSelectedFile(null);
+              }}>
                 <DialogTrigger asChild>
                   <Button size="sm" className="gap-2">
                     <Upload className="h-4 w-4" />
@@ -329,11 +352,58 @@ export default function PatientDashboard() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="p-8 border-2 border-dashed rounded-lg text-center bg-muted/20">
-                      <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-xs text-muted-foreground">Files are encrypted and stored securely.</p>
+                    
+                    <div 
+                      className={cn(
+                        "p-8 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors",
+                        selectedFile ? "bg-primary/5 border-primary/50" : "bg-muted/20 hover:bg-muted/30 border-muted-foreground/20"
+                      )}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        onChange={handleFileChange}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                      />
+                      {selectedFile ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-full shadow-sm border">
+                            <FileIcon className="h-4 w-4 text-primary" />
+                            <span className="text-xs font-medium truncate max-w-[200px]">{selectedFile.name}</span>
+                            <button 
+                              type="button" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedFile(null);
+                              }}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">Click or drag to change file</p>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-xs text-muted-foreground">Click to browse or drag and drop file here</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">PDF, JPG, PNG (Max 10MB)</p>
+                        </>
+                      )}
                     </div>
-                    <Button type="submit" className="w-full">Upload to File</Button>
+
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground justify-center">
+                      <AlertCircle className="h-3 w-3" />
+                      Files are encrypted and stored securely.
+                    </div>
+
+                    <Button type="submit" className="w-full" disabled={!selectedFile}>
+                      Upload to File
+                    </Button>
                   </form>
                 </DialogContent>
               </Dialog>
