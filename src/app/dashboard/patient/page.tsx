@@ -39,6 +39,16 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { 
   Select, 
   SelectContent, 
   SelectItem, 
@@ -74,6 +84,7 @@ export default function PatientDashboard() {
   // Management State
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [editingReport, setEditingReport] = useState<Report | null>(null);
+  const [reportToDelete, setReportToDelete] = useState<string | null>(null);
 
   const assignedDoctor = useMemo(() => users.find(u => u.id === currentUser?.doctorId), [users, currentUser]);
   const myAppointments = useMemo(() => appointments.filter(a => a.patientId === currentUser?.id), [appointments, currentUser]);
@@ -161,10 +172,11 @@ export default function PatientDashboard() {
     toast({ title: "Record Updated", description: "The medical record has been updated." });
   };
 
-  const handleDeleteReport = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this record? This action cannot be undone.")) {
-      deleteReport(id);
+  const confirmDeleteReport = () => {
+    if (reportToDelete) {
+      deleteReport(reportToDelete);
+      setReportToDelete(null);
+      setViewingReport(null);
       toast({ title: "Record Deleted", description: "The record has been permanently removed." });
     }
   };
@@ -506,7 +518,12 @@ export default function PatientDashboard() {
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingReport(report)}>
                           <Edit className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={(e) => handleDeleteReport(report.id, e)}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 hover:text-destructive" 
+                          onClick={() => setReportToDelete(report.id)}
+                        >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -577,10 +594,22 @@ export default function PatientDashboard() {
       <Dialog open={!!viewingReport} onOpenChange={(open) => !open && setViewingReport(null)}>
         <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="p-6 pb-2">
-            <DialogTitle>{viewingReport?.title}</DialogTitle>
-            <DialogDescription>
-              Record ID: {viewingReport?.id} | Date: {viewingReport && format(new Date(viewingReport.date), "PPP")}
-            </DialogDescription>
+            <div className="flex items-center justify-between pr-8">
+              <div>
+                <DialogTitle>{viewingReport?.title}</DialogTitle>
+                <DialogDescription>
+                  Record ID: {viewingReport?.id} | Date: {viewingReport && format(new Date(viewingReport.date), "PPP")}
+                </DialogDescription>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-destructive hover:bg-destructive/10"
+                onClick={() => setReportToDelete(viewingReport?.id || null)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" /> Delete Record
+              </Button>
+            </div>
           </DialogHeader>
           <div className="flex-1 bg-muted/5 p-4 flex items-center justify-center overflow-auto">
             {viewingReport && (
@@ -660,6 +689,24 @@ export default function PatientDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Alert */}
+      <AlertDialog open={!!reportToDelete} onOpenChange={(open) => !open && setReportToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the medical record from your secure health history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteReport} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Permanently Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

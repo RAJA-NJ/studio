@@ -40,6 +40,16 @@ import {
   DialogTrigger 
 } from "@/components/ui/dialog";
 import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { 
   Select, 
   SelectContent, 
   SelectItem, 
@@ -84,6 +94,7 @@ export default function DoctorDashboard() {
   // Management State for Reports
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [editingReport, setEditingReport] = useState<Report | null>(null);
+  const [reportToDelete, setReportToDelete] = useState<string | null>(null);
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -141,9 +152,11 @@ export default function DoctorDashboard() {
     toast({ title: "Record Updated", description: "The record has been updated." });
   };
 
-  const handleDeleteReport = (id: string) => {
-    if (confirm("Permanently delete this medical record?")) {
-      deleteReport(id);
+  const confirmDeleteReport = () => {
+    if (reportToDelete) {
+      deleteReport(reportToDelete);
+      setReportToDelete(null);
+      setViewingReport(null);
       toast({ title: "Record Deleted", description: "Removed from patient history." });
     }
   };
@@ -359,7 +372,7 @@ export default function DoctorDashboard() {
                                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingReport(report)}>
                                     <Edit className="h-3.5 w-3.5" />
                                   </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteReport(report.id)}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => setReportToDelete(report.id)}>
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
@@ -617,10 +630,22 @@ export default function DoctorDashboard() {
       <Dialog open={!!viewingReport} onOpenChange={(open) => !open && setViewingReport(null)}>
         <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="p-6 pb-2">
-            <DialogTitle>{viewingReport?.title}</DialogTitle>
-            <DialogDescription>
-              Record Date: {viewingReport && format(new Date(viewingReport.date), "PPP")}
-            </DialogDescription>
+            <div className="flex items-center justify-between pr-8">
+              <div>
+                <DialogTitle>{viewingReport?.title}</DialogTitle>
+                <DialogDescription>
+                  Record Date: {viewingReport && format(new Date(viewingReport.date), "PPP")}
+                </DialogDescription>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-destructive hover:bg-destructive/10"
+                onClick={() => setReportToDelete(viewingReport?.id || null)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" /> Delete Record
+              </Button>
+            </div>
           </DialogHeader>
           <div className="flex-1 bg-muted/10 flex items-center justify-center overflow-auto p-4">
              {viewingReport && (
@@ -700,6 +725,24 @@ export default function DoctorDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Alert */}
+      <AlertDialog open={!!reportToDelete} onOpenChange={(open) => !open && setReportToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete this medical record? This action cannot be undone and the record will be removed from the patient's history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteReport} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
