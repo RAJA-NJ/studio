@@ -135,8 +135,6 @@ export default function PatientDashboard() {
     const title = formData.get('title') as string;
     const type = formData.get('type') as 'scan' | 'prescription';
     
-    // In a real app, we'd upload the file and get a new URL.
-    // Here we simulate updating the URL if a new file was chosen.
     const newFileUrl = editSelectedFile ? `https://picsum.photos/seed/edit-${Date.now()}/800/1000` : editingReport.fileUrl;
 
     updateReport(editingReport.id, { title, type, fileUrl: newFileUrl });
