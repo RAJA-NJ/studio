@@ -75,6 +75,8 @@ interface AppStoreContextType {
   approveAppointment: (id: string) => void;
   markVisited: (id: string, notes: string) => void;
   uploadFileForPatient: (patientId: string, title: string, fileUrl: string, type: "scan" | "prescription") => void;
+  deleteReport: (id: string) => void;
+  updateReport: (id: string, data: Partial<Report>) => void;
   bookAppointment: (doctorId: string, date: string) => void;
   reportIssueToAdmin: (description: string) => void;
   sendMessage: (toId: string, text: string) => void;
@@ -199,6 +201,14 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     setReports(prev => [...prev, newReport]);
   };
 
+  const deleteReport = (id: string) => {
+    setReports(prev => prev.filter(r => r.id !== id));
+  };
+
+  const updateReport = (id: string, data: Partial<Report>) => {
+    setReports(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
+  };
+
   const bookAppointment = (doctorId: string, date: string) => {
     if (!currentUser) return;
     const newAppt: Appointment = {
@@ -239,7 +249,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       isLoaded, users, appointments, reports, adminIssues, messages, currentUser,
       login, logout, updateProfile, createDoctor, deleteDoctor, resetDoctorPassword,
       createPatient, deletePatient, updatePatientPassword, approveAppointment,
-      markVisited, uploadFileForPatient, bookAppointment, reportIssueToAdmin, sendMessage
+      markVisited, uploadFileForPatient, deleteReport, updateReport, bookAppointment, reportIssueToAdmin, sendMessage
     }}>
       {children}
     </AppStoreContext.Provider>

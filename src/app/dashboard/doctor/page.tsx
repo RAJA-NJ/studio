@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppStore } from "@/app/lib/store";
+import { useAppStore, Report } from "@/app/lib/store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,7 +21,9 @@ import {
   MoreVertical,
   Key,
   AlertCircle,
-  Upload
+  Upload,
+  Eye,
+  Edit
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -59,7 +61,9 @@ export default function DoctorDashboard() {
     markVisited,
     updatePatientPassword,
     updateProfile,
-    uploadFileForPatient
+    uploadFileForPatient,
+    deleteReport,
+    updateReport
   } = useAppStore();
   const { toast } = useToast();
 
@@ -74,6 +78,10 @@ export default function DoctorDashboard() {
   const [visitNotes, setVisitNotes] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<{ suggestions: string, disclaimer: string } | null>(null);
+
+  // Management State for Reports
+  const [viewingReport, setViewingReport] = useState<Report | null>(null);
+  const [editingReport, setEditingReport] = useState<Report | null>(null);
 
   const myPatients = users.filter(u => u.role === "patient" && u.doctorId === currentUser?.id);
   const pendingAppointments = appointments.filter(a => a.doctorId === currentUser?.id && a.status === "pending");
@@ -100,9 +108,28 @@ export default function DoctorDashboard() {
     const type = formData.get('type') as 'scan' | 'prescription';
     
     if (title && type && selectedPatientId) {
-      uploadFileForPatient(selectedPatientId, title, 'https://example.com/report.pdf', type);
+      uploadFileForPatient(selectedPatientId, title, 'https://picsum.photos/seed/doc-up/800/1000', type);
       setIsRecordDialogOpen(false);
       toast({ title: "Report Added", description: "Record has been successfully added to patient file." });
+    }
+  };
+
+  const handleEditReport = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingReport) return;
+    const formData = new FormData(e.currentTarget);
+    const title = formData.get('title') as string;
+    const type = formData.get('type') as 'scan' | 'prescription';
+    
+    updateReport(editingReport.id, { title, type });
+    setEditingReport(null);
+    toast({ title: "Record Updated", description: "The record has been updated." });
+  };
+
+  const handleDeleteReport = (id: string) => {
+    if (confirm("Permanently delete this medical record?")) {
+      deleteReport(id);
+      toast({ title: "Record Deleted", description: "Removed from patient history." });
     }
   };
 
@@ -223,7 +250,7 @@ export default function DoctorDashboard() {
                             <CardDescription className="flex items-center gap-2">
                               Patient ID: {selectedPatient.username}
                               <span className="inline-block h-1 w-1 rounded-full bg-muted-foreground" />
-                              <span className="text-green-600 flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-green-500" /> Online Now</span>
+                              <span className="text-green-600 flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-green-500" /> Online</span>
                             </CardDescription>
                           </div>
                         </div>
@@ -278,44 +305,53 @@ export default function DoctorDashboard() {
                         <div className="space-y-4">
                           <h3 className="font-semibold flex items-center gap-2">
                             <FileText className="h-4 w-4 text-primary" />
-                            Recent Reports
+                            Patient File
                           </h3>
-                          <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
                             {patientReports.map(report => (
-                              <div key={report.id} className="p-3 bg-muted/30 rounded-lg text-sm flex items-center justify-between">
+                              <div key={report.id} className="p-3 bg-muted/30 rounded-xl text-sm flex items-center justify-between group/report border border-transparent hover:border-primary/20 hover:bg-white transition-all">
                                 <div className="flex items-center gap-3">
-                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                  <div className="p-1.5 bg-white rounded shadow-sm">
+                                    <FileText className="h-4 w-4 text-primary" />
+                                  </div>
                                   <div className="flex flex-col">
-                                    <span className="font-medium">{report.title}</span>
+                                    <span className="font-medium line-clamp-1">{report.title}</span>
                                     <span className="text-[10px] text-muted-foreground">{format(new Date(report.date), "MMM d, yyyy")}</span>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="secondary" className="text-[8px] h-4">{report.type}</Badge>
-                                  <Button variant="ghost" size="sm">View</Button>
+                                <div className="flex items-center gap-1 opacity-0 group-hover/report:opacity-100 transition-opacity">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingReport(report)}>
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingReport(report)}>
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteReport(report.id)}>
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
                                 </div>
                               </div>
                             ))}
                             {patientReports.length === 0 && (
-                              <p className="text-xs text-center text-muted-foreground py-8 italic">No records uploaded yet.</p>
+                              <p className="text-xs text-center text-muted-foreground py-8 italic">No records in file.</p>
                             )}
                           </div>
                           
                           <Dialog open={isRecordDialogOpen} onOpenChange={setIsRecordDialogOpen}>
                             <DialogTrigger asChild>
                               <Button variant="outline" className="w-full gap-2 border-dashed">
-                                <PlusCircle className="h-4 w-4" /> Upload New Record
+                                <PlusCircle className="h-4 w-4" /> Add Record to File
                               </Button>
                             </DialogTrigger>
                             <DialogContent>
                               <DialogHeader>
                                 <DialogTitle>Add Record for {selectedPatient.name}</DialogTitle>
-                                <DialogDescription>Attach a diagnostic scan or a new prescription to the patient profile.</DialogDescription>
+                                <DialogDescription>Attach a diagnostic scan or a new prescription.</DialogDescription>
                               </DialogHeader>
                               <form onSubmit={handleRecordUpload} className="space-y-4 py-4">
                                 <div className="space-y-2">
                                   <Label htmlFor="title">Record Title</Label>
-                                  <Input id="title" name="title" placeholder="e.g. Chest X-Ray" required />
+                                  <Input id="title" name="title" placeholder="e.g. Lab Results 04/24" required />
                                 </div>
                                 <div className="space-y-2">
                                   <Label htmlFor="type">Type</Label>
@@ -341,8 +377,8 @@ export default function DoctorDashboard() {
               ) : (
                 <div className="h-full flex flex-col items-center justify-center p-12 bg-muted/20 border-2 border-dashed rounded-xl">
                   <Users className="h-16 w-16 text-muted-foreground mb-4 opacity-50" />
-                  <h3 className="text-xl font-medium text-muted-foreground">Select a patient to view details</h3>
-                  <p className="text-sm text-muted-foreground">Click on a patient from the list on the left.</p>
+                  <h3 className="text-xl font-medium text-muted-foreground">Select a patient</h3>
+                  <p className="text-sm text-muted-foreground">Click a patient from the sidebar to view their full history.</p>
                 </div>
               )}
             </div>
@@ -509,6 +545,61 @@ export default function DoctorDashboard() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* View Record Dialog */}
+      <Dialog open={!!viewingReport} onOpenChange={(open) => !open && setViewingReport(null)}>
+        <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{viewingReport?.title}</DialogTitle>
+            <DialogDescription>
+              Record Date: {viewingReport && format(new Date(viewingReport.date), "PPP")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 bg-muted/10 rounded-xl overflow-hidden flex flex-col items-center justify-center border p-4">
+             {viewingReport && (
+               <>
+                <img src={viewingReport.fileUrl} alt="Report File" className="max-h-full object-contain rounded-lg shadow-xl" />
+                <p className="mt-4 text-xs text-muted-foreground italic">Clinical Review Interface</p>
+               </>
+             )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setViewingReport(null)}>Close</Button>
+            <Button className="gap-2"><Upload className="h-4 w-4" /> Download for EHR</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Record Dialog */}
+      <Dialog open={!!editingReport} onOpenChange={(open) => !open && setEditingReport(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Patient Record</DialogTitle>
+            <DialogDescription>Update metadata for this diagnostic file.</DialogDescription>
+          </DialogHeader>
+          {editingReport && (
+            <form onSubmit={handleEditReport} className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Record Title</Label>
+                <Input name="title" defaultValue={editingReport.title} required />
+              </div>
+              <div className="space-y-2">
+                <Label>Classification</Label>
+                <Select name="type" defaultValue={editingReport.type} required>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="scan">Scan / Imaging</SelectItem>
+                    <SelectItem value="prescription">Prescription</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" className="w-full">Update Record</Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
