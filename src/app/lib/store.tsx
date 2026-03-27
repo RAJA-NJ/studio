@@ -84,7 +84,7 @@ const AppStoreContext = createContext<AppStoreContextType | null>(null);
 
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [adminIssues, setAdminIssues] = useState<AdminIssue[]>([]);
@@ -99,12 +99,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const savedMessages = localStorage.getItem("hlink_messages");
     const savedSession = localStorage.getItem("hlink_session");
 
-    setUsers(savedUsers ? JSON.parse(savedUsers) : INITIAL_USERS);
-    setAppointments(savedAppointments ? JSON.parse(savedAppointments) : []);
-    setReports(savedReports ? JSON.parse(savedReports) : []);
-    setAdminIssues(savedIssues ? JSON.parse(savedIssues) : []);
-    setMessages(savedMessages ? JSON.parse(savedMessages) : []);
-    setCurrentUser(savedSession ? JSON.parse(savedSession) : null);
+    if (savedUsers) setUsers(JSON.parse(savedUsers));
+    if (savedAppointments) setAppointments(JSON.parse(savedAppointments));
+    if (savedReports) setReports(JSON.parse(savedReports));
+    if (savedIssues) setAdminIssues(JSON.parse(savedIssues));
+    if (savedMessages) setMessages(JSON.parse(savedMessages));
+    if (savedSession) setCurrentUser(JSON.parse(savedSession));
+    
     setIsLoaded(true);
   }, []);
 
@@ -133,49 +134,47 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setCurrentUser(null);
-    localStorage.removeItem("hlink_session");
   };
 
   const updateProfile = (data: Partial<User>) => {
     if (!currentUser) return;
-    const updatedUsers = users.map(u => u.id === currentUser.id ? { ...u, ...data } : u);
-    setUsers(updatedUsers);
+    setUsers(prev => prev.map(u => u.id === currentUser.id ? { ...u, ...data } : u));
     setCurrentUser({ ...currentUser, ...data });
   };
 
   const createDoctor = (doc: Omit<User, "id" | "role">) => {
     const newUser: User = { ...doc, id: `u-${Date.now()}`, role: "doctor" };
-    setUsers([...users, newUser]);
+    setUsers(prev => [...prev, newUser]);
   };
 
   const deleteDoctor = (id: string) => {
-    setUsers(users.filter(u => u.id !== id));
+    setUsers(prev => prev.filter(u => u.id !== id));
   };
 
   const resetDoctorPassword = (id: string, newPass: string) => {
-    setUsers(users.map(u => u.id === id ? { ...u, password: newPass } : u));
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, password: newPass } : u));
   };
 
   const createPatient = (pat: Omit<User, "id" | "role" | "doctorId">) => {
     if (!currentUser || currentUser.role !== "doctor") return;
     const newUser: User = { ...pat, id: `u-${Date.now()}`, role: "patient", doctorId: currentUser.id };
-    setUsers([...users, newUser]);
+    setUsers(prev => [...prev, newUser]);
   };
 
   const deletePatient = (id: string) => {
-    setUsers(users.filter(u => u.id !== id));
+    setUsers(prev => prev.filter(u => u.id !== id));
   };
 
   const updatePatientPassword = (id: string, newPass: string) => {
-    setUsers(users.map(u => u.id === id ? { ...u, password: newPass } : u));
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, password: newPass } : u));
   };
 
   const approveAppointment = (id: string) => {
-    setAppointments(appointments.map(a => a.id === id ? { ...a, status: "approved" } : a));
+    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: "approved" } : a));
   };
 
   const markVisited = (id: string, notes: string) => {
-    setAppointments(appointments.map(a => a.id === id ? { ...a, status: "visited", notes } : a));
+    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: "visited", notes } : a));
   };
 
   const uploadFileForPatient = (patientId: string, title: string, fileUrl: string, type: "scan" | "prescription") => {
@@ -189,7 +188,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       date: new Date().toISOString(),
       type
     };
-    setReports([...reports, newReport]);
+    setReports(prev => [...prev, newReport]);
   };
 
   const bookAppointment = (doctorId: string, date: string) => {
@@ -201,7 +200,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       date,
       status: "pending"
     };
-    setAppointments([...appointments, newAppt]);
+    setAppointments(prev => [...prev, newAppt]);
   };
 
   const reportIssueToAdmin = (description: string) => {
@@ -212,7 +211,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       description,
       date: new Date().toISOString()
     };
-    setAdminIssues([...adminIssues, newIssue]);
+    setAdminIssues(prev => [...prev, newIssue]);
   };
 
   const sendMessage = (toId: string, text: string) => {
@@ -224,7 +223,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       text,
       timestamp: new Date().toISOString()
     };
-    setMessages([...messages, newMessage]);
+    setMessages(prev => [...prev, newMessage]);
   };
 
   return (

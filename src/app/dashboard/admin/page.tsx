@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppStore, User } from "@/app/lib/store";
+import { useAppStore } from "@/app/lib/store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

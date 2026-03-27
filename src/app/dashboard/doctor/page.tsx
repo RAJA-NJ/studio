@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppStore, User, Appointment } from "@/app/lib/store";
+import { useAppStore } from "@/app/lib/store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -237,7 +237,6 @@ export default function DoctorDashboard() {
                             className="w-full" 
                             disabled={!visitNotes.trim()}
                             onClick={() => {
-                              // Find last approved appointment to mark visited
                               const lastAppt = appointments.find(a => a.patientId === selectedPatient.id && a.status === "approved");
                               if (lastAppt) {
                                 markVisited(lastAppt.id, visitNotes);
