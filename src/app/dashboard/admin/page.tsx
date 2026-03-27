@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppStore } from "@/app/lib/store";
+import { useAppStore, User } from "@/app/lib/store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,7 +16,8 @@ import {
   Activity, 
   Search,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Lock
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -47,6 +48,10 @@ export default function AdminDashboard() {
   const [docPass, setDocPass] = useState("");
   const [docSpec, setDocSpec] = useState("");
 
+  // Password reset state
+  const [resettingDoc, setResettingDoc] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+
   const doctors = users.filter(u => u.role === "doctor");
   const patientsCount = users.filter(u => u.role === "patient").length;
 
@@ -55,6 +60,19 @@ export default function AdminDashboard() {
     createDoctor({ name: docName, username: docUser, password: docPass, specialization: docSpec });
     setDocName(""); setDocUser(""); setDocPass(""); setDocSpec("");
     toast({ title: "Doctor Created", description: "Account is active immediately." });
+  };
+
+  const handleResetPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (resettingDoc && newPassword) {
+      resetDoctorPassword(resettingDoc.id, newPassword);
+      toast({ 
+        title: "Password Updated", 
+        description: `Credentials for ${resettingDoc.name} have been updated.` 
+      });
+      setResettingDoc(null);
+      setNewPassword("");
+    }
   };
 
   return (
@@ -165,10 +183,7 @@ export default function AdminDashboard() {
                         <td className="p-4">{doc.specialization}</td>
                         <td className="p-4 text-muted-foreground">{doc.username}</td>
                         <td className="p-4 text-right space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => {
-                            const newPass = prompt("Enter new password for doctor:");
-                            if (newPass) resetDoctorPassword(doc.id, newPass);
-                          }}>
+                          <Button variant="outline" size="sm" onClick={() => setResettingDoc(doc)}>
                             <Key className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => deleteDoctor(doc.id)}>
@@ -267,6 +282,39 @@ export default function AdminDashboard() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={!!resettingDoc} onOpenChange={(open) => !open && setResettingDoc(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Reset Password
+            </DialogTitle>
+            <DialogDescription>
+              Assign a new temporary password for <strong>{resettingDoc?.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleResetPassword} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Secure Password</Label>
+              <Input 
+                id="new-password" 
+                type="password" 
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setResettingDoc(null)}>Cancel</Button>
+              <Button type="submit">Update Credentials</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
