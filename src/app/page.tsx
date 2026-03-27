@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppStore, Role } from "@/app/lib/store";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, ShieldCheck, Stethoscope, UserCircle } from "lucide-react";
+import { Activity, ShieldCheck, Stethoscope, UserCircle, Moon, Sun } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
@@ -19,6 +19,22 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [activeRole, setActiveRole] = useState<Role>("patient");
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains("dark");
+    setIsDarkMode(isDark);
+  }, []);
+
+  const toggleTheme = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    if (newMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +52,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden transition-colors duration-300">
+      {/* Theme Toggle Button */}
+      <div className="absolute top-4 right-4 z-50">
+        <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-full">
+          {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </Button>
+      </div>
+
       {/* Abstract Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 rounded-full blur-3xl pointer-events-none" />
@@ -102,12 +125,6 @@ export default function LoginPage() {
               </form>
             </Tabs>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-2 text-center">
-            <p className="text-xs text-muted-foreground px-4">
-              Demo Credentials:<br/>
-              Patient: pat_jane / patient | Doctor: dr_smith / doctor | Admin: admin / admin
-            </p>
-          </CardFooter>
         </Card>
       </div>
     </div>
