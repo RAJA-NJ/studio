@@ -121,7 +121,7 @@ export default function PatientDashboard() {
     const type = formData.get('type') as 'scan' | 'prescription';
     
     if (title && type && currentUser) {
-      uploadFileForPatient(currentUser.id, title, 'https://picsum.photos/seed/report/800/1000', type);
+      uploadFileForPatient(currentUser.id, title, `https://picsum.photos/seed/${Date.now()}/800/1000`, type);
       setIsUploadDialogOpen(false);
       setSelectedFile(null);
       toast({ title: "Record Uploaded", description: "Your doctor can now view this record." });
@@ -533,27 +533,24 @@ export default function PatientDashboard() {
 
       {/* View Report Dialog */}
       <Dialog open={!!viewingReport} onOpenChange={(open) => !open && setViewingReport(null)}>
-        <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2">
             <DialogTitle>{viewingReport?.title}</DialogTitle>
             <DialogDescription>
               Record ID: {viewingReport?.id} | Date: {viewingReport && format(new Date(viewingReport.date), "PPP")}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 bg-muted/20 rounded-lg overflow-hidden flex items-center justify-center border-2 border-dashed">
+          <div className="flex-1 bg-muted/5 p-4 flex items-center justify-center overflow-auto">
             {viewingReport && (
-              <div className="text-center p-8">
-                <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <p className="text-sm text-muted-foreground italic">Document Previewing Feature</p>
-                <img src={viewingReport.fileUrl} alt="Report Preview" className="mt-4 max-h-[400px] rounded-lg shadow-lg border" />
-              </div>
+              <img 
+                src={viewingReport.fileUrl} 
+                alt="Medical Record Preview" 
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl border bg-white" 
+              />
             )}
           </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setViewingReport(null)}>Close Viewer</Button>
-            <Button className="gap-2">
-              <Upload className="h-4 w-4" /> Download Original
-            </Button>
+          <DialogFooter className="p-4 bg-background border-t">
+            <Button variant="outline" onClick={() => setViewingReport(null)}>Close Preview</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

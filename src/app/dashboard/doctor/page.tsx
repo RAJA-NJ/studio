@@ -111,7 +111,7 @@ export default function DoctorDashboard() {
     const type = formData.get('type') as 'scan' | 'prescription';
     
     if (title && type && selectedPatientId) {
-      uploadFileForPatient(selectedPatientId, title, 'https://picsum.photos/seed/doc-up/800/1000', type);
+      uploadFileForPatient(selectedPatientId, title, `https://picsum.photos/seed/${Date.now()}/800/1000`, type);
       setIsRecordDialogOpen(false);
       toast({ title: "Report Added", description: "Record has been successfully added to patient file." });
     }
@@ -124,7 +124,6 @@ export default function DoctorDashboard() {
     const title = formData.get('title') as string;
     const type = formData.get('type') as 'scan' | 'prescription';
     
-    // Simulate updating file URL
     const newFileUrl = editSelectedFile ? `https://picsum.photos/seed/edit-doc-${Date.now()}/800/1000` : editingReport.fileUrl;
 
     updateReport(editingReport.id, { title, type, fileUrl: newFileUrl });
@@ -561,24 +560,24 @@ export default function DoctorDashboard() {
 
       {/* View Record Dialog */}
       <Dialog open={!!viewingReport} onOpenChange={(open) => !open && setViewingReport(null)}>
-        <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2">
             <DialogTitle>{viewingReport?.title}</DialogTitle>
             <DialogDescription>
               Record Date: {viewingReport && format(new Date(viewingReport.date), "PPP")}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 bg-muted/10 rounded-xl overflow-hidden flex flex-col items-center justify-center border p-4">
+          <div className="flex-1 bg-muted/10 flex items-center justify-center overflow-auto p-4">
              {viewingReport && (
-               <>
-                <img src={viewingReport.fileUrl} alt="Report File" className="max-h-full object-contain rounded-lg shadow-xl" />
-                <p className="mt-4 text-xs text-muted-foreground italic">Clinical Review Interface</p>
-               </>
+               <img 
+                 src={viewingReport.fileUrl} 
+                 alt="Report File" 
+                 className="max-h-full max-w-full object-contain rounded-lg shadow-2xl bg-white border" 
+               />
              )}
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setViewingReport(null)}>Close</Button>
-            <Button className="gap-2"><Upload className="h-4 w-4" /> Download for EHR</Button>
+          <DialogFooter className="p-4 bg-background border-t">
+            <Button variant="outline" onClick={() => setViewingReport(null)}>Close Preview</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
