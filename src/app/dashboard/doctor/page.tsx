@@ -23,9 +23,10 @@ import {
   AlertCircle,
   Upload,
   Eye,
-  Edit
+  Edit,
+  File as FileIcon
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { format } from "date-fns";
 import { ChatModule } from "@/components/dashboard/ChatModule";
 import { 
@@ -82,6 +83,8 @@ export default function DoctorDashboard() {
   // Management State for Reports
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [editingReport, setEditingReport] = useState<Report | null>(null);
+  const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const myPatients = users.filter(u => u.role === "patient" && u.doctorId === currentUser?.id);
   const pendingAppointments = appointments.filter(a => a.doctorId === currentUser?.id && a.status === "pending");
@@ -121,8 +124,12 @@ export default function DoctorDashboard() {
     const title = formData.get('title') as string;
     const type = formData.get('type') as 'scan' | 'prescription';
     
-    updateReport(editingReport.id, { title, type });
+    // Simulate updating file URL
+    const newFileUrl = editSelectedFile ? `https://picsum.photos/seed/edit-doc-${Date.now()}/800/1000` : editingReport.fileUrl;
+
+    updateReport(editingReport.id, { title, type, fileUrl: newFileUrl });
     setEditingReport(null);
+    setEditSelectedFile(null);
     toast({ title: "Record Updated", description: "The record has been updated." });
   };
 
@@ -130,6 +137,12 @@ export default function DoctorDashboard() {
     if (confirm("Permanently delete this medical record?")) {
       deleteReport(id);
       toast({ title: "Record Deleted", description: "Removed from patient history." });
+    }
+  };
+
+  const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setEditSelectedFile(e.target.files[0]);
     }
   };
 
@@ -571,11 +584,16 @@ export default function DoctorDashboard() {
       </Dialog>
 
       {/* Edit Record Dialog */}
-      <Dialog open={!!editingReport} onOpenChange={(open) => !open && setEditingReport(null)}>
+      <Dialog open={!!editingReport} onOpenChange={(open) => {
+        if (!open) {
+          setEditingReport(null);
+          setEditSelectedFile(null);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Patient Record</DialogTitle>
-            <DialogDescription>Update metadata for this diagnostic file.</DialogDescription>
+            <DialogDescription>Update metadata or change the diagnostic file for this record.</DialogDescription>
           </DialogHeader>
           {editingReport && (
             <form onSubmit={handleEditReport} className="space-y-4 py-4">
@@ -595,6 +613,34 @@ export default function DoctorDashboard() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label>Replace Document Image</Label>
+                <div 
+                  className="p-4 border-2 border-dashed rounded-lg text-center cursor-pointer hover:bg-muted/30 transition-colors"
+                  onClick={() => editFileInputRef.current?.click()}
+                >
+                  <input 
+                    type="file" 
+                    ref={editFileInputRef} 
+                    className="hidden" 
+                    onChange={handleEditFileChange}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                  />
+                  {editSelectedFile ? (
+                    <div className="flex items-center justify-center gap-2 text-primary text-xs font-medium">
+                      <FileIcon className="h-4 w-4" />
+                      {editSelectedFile.name}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1">
+                      <Upload className="h-6 w-6 text-muted-foreground mb-1" />
+                      <p className="text-[10px] text-muted-foreground">Click to upload new scan/document</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <Button type="submit" className="w-full">Update Record</Button>
             </form>
           )}

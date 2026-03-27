@@ -66,7 +66,9 @@ export default function PatientDashboard() {
   const [apptDate, setApptDate] = useState("");
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   // Management State
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
@@ -106,6 +108,12 @@ export default function PatientDashboard() {
     }
   };
 
+  const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setEditSelectedFile(e.target.files[0]);
+    }
+  };
+
   const handleUploadSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -127,8 +135,13 @@ export default function PatientDashboard() {
     const title = formData.get('title') as string;
     const type = formData.get('type') as 'scan' | 'prescription';
     
-    updateReport(editingReport.id, { title, type });
+    // In a real app, we'd upload the file and get a new URL.
+    // Here we simulate updating the URL if a new file was chosen.
+    const newFileUrl = editSelectedFile ? `https://picsum.photos/seed/edit-${Date.now()}/800/1000` : editingReport.fileUrl;
+
+    updateReport(editingReport.id, { title, type, fileUrl: newFileUrl });
     setEditingReport(null);
+    setEditSelectedFile(null);
     toast({ title: "Record Updated", description: "The medical record has been updated." });
   };
 
@@ -547,11 +560,16 @@ export default function PatientDashboard() {
       </Dialog>
 
       {/* Edit Report Dialog */}
-      <Dialog open={!!editingReport} onOpenChange={(open) => !open && setEditingReport(null)}>
+      <Dialog open={!!editingReport} onOpenChange={(open) => {
+        if (!open) {
+          setEditingReport(null);
+          setEditSelectedFile(null);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Medical Record</DialogTitle>
-            <DialogDescription>Modify the title or category of this record.</DialogDescription>
+            <DialogDescription>Modify the details or change the attached file.</DialogDescription>
           </DialogHeader>
           {editingReport && (
             <form onSubmit={handleEditSubmit} className="space-y-4 py-4">
@@ -571,6 +589,34 @@ export default function PatientDashboard() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label>Medical Document</Label>
+                <div 
+                  className="p-4 border-2 border-dashed rounded-lg text-center cursor-pointer hover:bg-muted/30 transition-colors"
+                  onClick={() => editFileInputRef.current?.click()}
+                >
+                  <input 
+                    type="file" 
+                    ref={editFileInputRef} 
+                    className="hidden" 
+                    onChange={handleEditFileChange}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                  />
+                  {editSelectedFile ? (
+                    <div className="flex items-center justify-center gap-2 text-primary text-xs font-medium">
+                      <FileIcon className="h-4 w-4" />
+                      {editSelectedFile.name} (Replace)
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1">
+                      <Upload className="h-6 w-6 text-muted-foreground mb-1" />
+                      <p className="text-[10px] text-muted-foreground">Click to replace the current file</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <Button type="submit" className="w-full">Save Changes</Button>
             </form>
           )}

@@ -141,7 +141,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = (data: Partial<User>) => {
     if (!currentUser) return;
     setUsers(prev => prev.map(u => u.id === currentUser.id ? { ...u, ...data } : u));
-    setCurrentUser({ ...currentUser, ...data });
+    setCurrentUser(prev => prev ? { ...prev, ...data } : null);
   };
 
   const createDoctor = (doc: Omit<User, "id" | "role">) => {
