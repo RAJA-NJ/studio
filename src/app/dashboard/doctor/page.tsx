@@ -20,7 +20,8 @@ import {
   CheckCircle,
   MoreVertical,
   Key,
-  AlertCircle
+  AlertCircle,
+  Upload
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -34,6 +35,13 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { doctorAidSuggestions } from "@/ai/flows/doctor-aid-suggestions";
@@ -44,17 +52,20 @@ export default function DoctorDashboard() {
     currentUser, 
     users, 
     appointments, 
+    reports,
     createPatient, 
     deletePatient, 
     approveAppointment, 
     markVisited,
     updatePatientPassword,
-    updateProfile 
+    updateProfile,
+    uploadFileForPatient
   } = useAppStore();
   const { toast } = useToast();
 
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("patients");
+  const [isRecordDialogOpen, setIsRecordDialogOpen] = useState(false);
   
   const [newPatientName, setNewPatientName] = useState("");
   const [newPatientUser, setNewPatientUser] = useState("");
@@ -67,6 +78,7 @@ export default function DoctorDashboard() {
   const myPatients = users.filter(u => u.role === "patient" && u.doctorId === currentUser?.id);
   const pendingAppointments = appointments.filter(a => a.doctorId === currentUser?.id && a.status === "pending");
   const selectedPatient = myPatients.find(p => p.id === selectedPatientId);
+  const patientReports = reports.filter(r => r.patientId === selectedPatientId);
   
   const handleCreatePatient = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +91,19 @@ export default function DoctorDashboard() {
     setNewPatientUser("");
     setNewPatientPass("");
     toast({ title: "Patient Created", description: "Login credentials generated successfully." });
+  };
+
+  const handleRecordUpload = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const title = formData.get('title') as string;
+    const type = formData.get('type') as 'scan' | 'prescription';
+    
+    if (title && type && selectedPatientId) {
+      uploadFileForPatient(selectedPatientId, title, 'https://example.com/report.pdf', type);
+      setIsRecordDialogOpen(false);
+      toast({ title: "Report Added", description: "Record has been successfully added to patient file." });
+    }
   };
 
   const runAiAssistant = async (symptoms: string) => {
@@ -256,25 +281,58 @@ export default function DoctorDashboard() {
                             Recent Reports
                           </h3>
                           <div className="space-y-2 max-h-[250px] overflow-y-auto">
-                            <div className="p-3 bg-muted/30 rounded-lg text-sm flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                <span>Blood Test Result.pdf</span>
+                            {patientReports.map(report => (
+                              <div key={report.id} className="p-3 bg-muted/30 rounded-lg text-sm flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{report.title}</span>
+                                    <span className="text-[10px] text-muted-foreground">{format(new Date(report.date), "MMM d, yyyy")}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="secondary" className="text-[8px] h-4">{report.type}</Badge>
+                                  <Button variant="ghost" size="sm">View</Button>
+                                </div>
                               </div>
-                              <Button variant="ghost" size="sm">View</Button>
-                            </div>
-                            <div className="p-3 bg-muted/30 rounded-lg text-sm flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                <span>X-Ray Scan (Chest).jpg</span>
-                              </div>
-                              <Button variant="ghost" size="sm">View</Button>
-                            </div>
-                            <p className="text-xs text-center text-muted-foreground pt-2">Upload more files for the patient record below</p>
+                            ))}
+                            {patientReports.length === 0 && (
+                              <p className="text-xs text-center text-muted-foreground py-8 italic">No records uploaded yet.</p>
+                            )}
                           </div>
-                          <Button variant="outline" className="w-full gap-2 border-dashed">
-                            <PlusCircle className="h-4 w-4" /> Upload New Record
-                          </Button>
+                          
+                          <Dialog open={isRecordDialogOpen} onOpenChange={setIsRecordDialogOpen}>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" className="w-full gap-2 border-dashed">
+                                <PlusCircle className="h-4 w-4" /> Upload New Record
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Add Record for {selectedPatient.name}</DialogTitle>
+                                <DialogDescription>Attach a diagnostic scan or a new prescription to the patient profile.</DialogDescription>
+                              </DialogHeader>
+                              <form onSubmit={handleRecordUpload} className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="title">Record Title</Label>
+                                  <Input id="title" name="title" placeholder="e.g. Chest X-Ray" required />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="type">Type</Label>
+                                  <Select name="type" defaultValue="scan" required>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="scan">Scan / Imaging</SelectItem>
+                                      <SelectItem value="prescription">Prescription</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <Button type="submit" className="w-full">Save to Patient Profile</Button>
+                              </form>
+                            </DialogContent>
+                          </Dialog>
                         </div>
                       </div>
                     </CardContent>

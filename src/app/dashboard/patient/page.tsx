@@ -1,12 +1,11 @@
 "use client";
 
-import { useAppStore, User } from "@/app/lib/store";
+import { useAppStore } from "@/app/lib/store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { 
   Stethoscope, 
   MessageSquare, 
@@ -24,6 +23,21 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 
 export default function PatientDashboard() {
   const { 
@@ -33,13 +47,15 @@ export default function PatientDashboard() {
     reports, 
     bookAppointment, 
     reportIssueToAdmin, 
-    updateProfile 
+    updateProfile,
+    uploadFileForPatient
   } = useAppStore();
   const { toast } = useToast();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [issue, setIssue] = useState("");
   const [apptDate, setApptDate] = useState("");
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
 
   const assignedDoctor = users.find(u => u.id === currentUser?.doctorId);
   const myAppointments = appointments.filter(a => a.patientId === currentUser?.id);
@@ -66,6 +82,19 @@ export default function PatientDashboard() {
       bookAppointment(assignedDoctor.id, apptDate);
       setApptDate("");
       toast({ title: "Appointment Requested", description: "Waiting for doctor approval." });
+    }
+  };
+
+  const handleUploadSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const title = formData.get('title') as string;
+    const type = formData.get('type') as 'scan' | 'prescription';
+    
+    if (title && type && currentUser) {
+      uploadFileForPatient(currentUser.id, title, 'https://example.com/file.pdf', type);
+      setIsUploadDialogOpen(false);
+      toast({ title: "Record Uploaded", description: "Your doctor can now view this record." });
     }
   };
 
@@ -271,10 +300,43 @@ export default function PatientDashboard() {
                 <CardTitle>Medical Records</CardTitle>
                 <CardDescription>View reports, scans, and prescriptions</CardDescription>
               </div>
-              <Button size="sm" className="gap-2">
-                <Upload className="h-4 w-4" />
-                Upload New
-              </Button>
+              <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="gap-2">
+                    <Upload className="h-4 w-4" />
+                    Upload New
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Upload Medical Record</DialogTitle>
+                    <DialogDescription>Add a new scan report or prescription to your secure file.</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleUploadSubmit} className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Record Title</Label>
+                      <Input id="title" name="title" placeholder="e.g. Chest X-Ray, Blood Test" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="type">Record Type</Label>
+                      <Select name="type" defaultValue="scan" required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="scan">Scan / Imaging</SelectItem>
+                          <SelectItem value="prescription">Prescription</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="p-8 border-2 border-dashed rounded-lg text-center bg-muted/20">
+                      <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-xs text-muted-foreground">Files are encrypted and stored securely.</p>
+                    </div>
+                    <Button type="submit" className="w-full">Upload to File</Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

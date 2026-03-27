@@ -179,10 +179,18 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   const uploadFileForPatient = (patientId: string, title: string, fileUrl: string, type: "scan" | "prescription") => {
     if (!currentUser) return;
+    
+    let doctorId = '';
+    if (currentUser.role === 'doctor') {
+      doctorId = currentUser.id;
+    } else if (currentUser.role === 'patient') {
+      doctorId = currentUser.doctorId || '';
+    }
+
     const newReport: Report = {
       id: `r-${Date.now()}`,
       patientId,
-      doctorId: currentUser.id,
+      doctorId,
       title,
       fileUrl,
       date: new Date().toISOString(),
