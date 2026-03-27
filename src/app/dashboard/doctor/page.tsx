@@ -26,7 +26,8 @@ import {
   Edit,
   File as FileIcon,
   AlertTriangle,
-  User as UserIcon
+  User as UserIcon,
+  X
 } from "lucide-react";
 import { useState, useRef, useMemo } from "react";
 import { format } from "date-fns";
@@ -93,12 +94,15 @@ export default function DoctorDashboard() {
   const [aiResult, setAiResult] = useState<{ suggestions: string, disclaimer: string } | null>(null);
 
   // Management State for Reports
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+  const profilePicInputRef = useRef<HTMLInputElement>(null);
+
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [reportToDelete, setReportToDelete] = useState<string | null>(null);
-  const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
-  const editFileInputRef = useRef<HTMLInputElement>(null);
-  const profilePicInputRef = useRef<HTMLInputElement>(null);
 
   const myPatients = useMemo(() => users.filter(u => u.role === "patient" && u.doctorId === currentUser?.id), [users, currentUser]);
   
@@ -123,15 +127,31 @@ export default function DoctorDashboard() {
     toast({ title: "Patient Created", description: "Login credentials generated successfully." });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setEditSelectedFile(e.target.files[0]);
+    }
+  };
+
   const handleRecordUpload = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const title = formData.get('title') as string;
     const type = formData.get('type') as 'scan' | 'prescription';
     
-    if (title && type && selectedPatientId) {
-      uploadFileForPatient(selectedPatientId, title, `https://picsum.photos/seed/${Date.now()}/800/1000`, type);
+    if (title && type && selectedPatientId && selectedFile) {
+      // In a real app we'd upload the file to a storage bucket
+      // Here we simulate with a themed placeholder
+      const simulatedUrl = `https://picsum.photos/seed/${selectedFile.name}-${Date.now()}/800/1000`;
+      uploadFileForPatient(selectedPatientId, title, simulatedUrl, type);
       setIsRecordDialogOpen(false);
+      setSelectedFile(null);
       toast({ title: "Report Added", description: "Record has been successfully added to patient file." });
     }
   };
@@ -143,7 +163,9 @@ export default function DoctorDashboard() {
     const title = formData.get('title') as string;
     const type = formData.get('type') as 'scan' | 'prescription';
     
-    const newFileUrl = editSelectedFile ? `https://picsum.photos/seed/edit-doc-${Date.now()}/800/1000` : editingReport.fileUrl;
+    const newFileUrl = editSelectedFile 
+      ? `https://picsum.photos/seed/edit-doc-${editSelectedFile.name}-${Date.now()}/800/1000` 
+      : editingReport.fileUrl;
 
     updateReport(editingReport.id, { title, type, fileUrl: newFileUrl });
     setEditingReport(null);
@@ -157,12 +179,6 @@ export default function DoctorDashboard() {
       setReportToDelete(null);
       setViewingReport(null);
       toast({ title: "Record Deleted", description: "Removed from patient history." });
-    }
-  };
-
-  const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setEditSelectedFile(e.target.files[0]);
     }
   };
 
@@ -421,7 +437,49 @@ export default function DoctorDashboard() {
                                           </SelectContent>
                                         </Select>
                                       </div>
-                                      <Button type="submit" className="w-full">Save to Patient Profile</Button>
+
+                                      <div 
+                                        className={cn(
+                                          "p-8 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors",
+                                          selectedFile ? "bg-primary/5 border-primary/50" : "bg-muted/20 hover:bg-muted/30 border-muted-foreground/20"
+                                        )}
+                                        onClick={() => fileInputRef.current?.click()}
+                                      >
+                                        <input 
+                                          type="file" 
+                                          ref={fileInputRef} 
+                                          className="hidden" 
+                                          onChange={handleFileChange}
+                                          accept=".pdf,.jpg,.jpeg,.png"
+                                        />
+                                        {selectedFile ? (
+                                          <div className="flex flex-col items-center gap-2">
+                                            <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-full shadow-sm border">
+                                              <FileIcon className="h-4 w-4 text-primary" />
+                                              <span className="text-xs font-medium truncate max-w-[200px]">{selectedFile.name}</span>
+                                              <button 
+                                                type="button" 
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSelectedFile(null);
+                                                }}
+                                                className="text-muted-foreground hover:text-destructive"
+                                              >
+                                                <X className="h-3 w-3" />
+                                              </button>
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground">Click to change file</p>
+                                          </div>
+                                        ) : (
+                                          <>
+                                            <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                                            <p className="text-xs text-muted-foreground">Click to browse or upload file</p>
+                                            <p className="text-[10px] text-muted-foreground mt-1">PDF, JPG, PNG (Max 10MB)</p>
+                                          </>
+                                        )}
+                                      </div>
+
+                                      <Button type="submit" className="w-full" disabled={!selectedFile}>Save to Patient Profile</Button>
                                     </form>
                                   </DialogContent>
                                 </Dialog>
