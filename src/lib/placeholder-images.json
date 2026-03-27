@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "doctor-hero",
+      "description": "Professional doctor in a clinic setting",
+      "imageUrl": "https://picsum.photos/seed/doc-hero/1200/600",
+      "imageHint": "medical doctor"
+    },
+    {
+      "id": "admin-avatar",
+      "description": "Admin user profile picture",
+      "imageUrl": "https://picsum.photos/seed/admin-av/200/200",
+      "imageHint": "man office"
+    },
+    {
+      "id": "doctor-avatar",
+      "description": "Doctor profile picture",
+      "imageUrl": "https://picsum.photos/seed/doc-av/200/200",
+      "imageHint": "doctor profile"
+    },
+    {
+      "id": "patient-avatar",
+      "description": "Patient profile picture",
+      "imageUrl": "https://picsum.photos/seed/pat-av/200/200",
+      "imageHint": "person portrait"
+    }
+  ]
 }
