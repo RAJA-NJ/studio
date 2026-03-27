@@ -22,6 +22,7 @@ export interface Appointment {
   date: string;
   status: "pending" | "approved" | "visited";
   notes?: string;
+  isEmergency?: boolean;
 }
 
 export interface Report {
@@ -77,7 +78,7 @@ interface AppStoreContextType {
   uploadFileForPatient: (patientId: string, title: string, fileUrl: string, type: "scan" | "prescription") => void;
   deleteReport: (id: string) => void;
   updateReport: (id: string, data: Partial<Report>) => void;
-  bookAppointment: (doctorId: string, date: string) => void;
+  bookAppointment: (doctorId: string, date: string, isEmergency?: boolean) => void;
   reportIssueToAdmin: (description: string) => void;
   sendMessage: (toId: string, text: string) => void;
 }
@@ -210,14 +211,15 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     setReports(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
   }, []);
 
-  const bookAppointment = useCallback((doctorId: string, date: string) => {
+  const bookAppointment = useCallback((doctorId: string, date: string, isEmergency: boolean = false) => {
     if (!currentUser) return;
     const newAppt: Appointment = {
       id: `a-${Date.now()}-${Math.floor(Math.random()*1000)}`,
       patientId: currentUser.id,
       doctorId,
       date,
-      status: "pending"
+      status: "pending",
+      isEmergency
     };
     setAppointments(prev => [...prev, newAppt]);
   }, [currentUser]);

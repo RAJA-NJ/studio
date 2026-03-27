@@ -24,9 +24,10 @@ import {
   Upload,
   Eye,
   Edit,
-  File as FileIcon
+  File as FileIcon,
+  AlertTriangle
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { format } from "date-fns";
 import { ChatModule } from "@/components/dashboard/ChatModule";
 import { 
@@ -86,10 +87,18 @@ export default function DoctorDashboard() {
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
-  const myPatients = users.filter(u => u.role === "patient" && u.doctorId === currentUser?.id);
-  const pendingAppointments = appointments.filter(a => a.doctorId === currentUser?.id && a.status === "pending");
-  const selectedPatient = myPatients.find(p => p.id === selectedPatientId);
-  const patientReports = reports.filter(r => r.patientId === selectedPatientId);
+  const myPatients = useMemo(() => users.filter(u => u.role === "patient" && u.doctorId === currentUser?.id), [users, currentUser]);
+  
+  const emergencyAppointments = useMemo(() => appointments.filter(a => 
+    a.doctorId === currentUser?.id && a.status === "pending" && a.isEmergency
+  ), [appointments, currentUser]);
+
+  const regularAppointments = useMemo(() => appointments.filter(a => 
+    a.doctorId === currentUser?.id && a.status === "pending" && !a.isEmergency
+  ), [appointments, currentUser]);
+
+  const selectedPatient = useMemo(() => myPatients.find(p => p.id === selectedPatientId), [myPatients, selectedPatientId]);
+  const patientReports = useMemo(() => reports.filter(r => r.patientId === selectedPatientId), [reports, selectedPatientId]);
   
   const handleCreatePatient = (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,6 +175,11 @@ export default function DoctorDashboard() {
           <p className="text-muted-foreground">{currentUser?.name} | {currentUser?.specialization}</p>
         </div>
         <div className="flex gap-2">
+          {emergencyAppointments.length > 0 && (
+            <Badge variant="destructive" className="animate-pulse gap-1">
+              <AlertTriangle className="h-3 w-3" /> {emergencyAppointments.length} Emergency
+            </Badge>
+          )}
           <Badge className="bg-green-500/10 text-green-600 border-green-500/20 px-3 py-1">Online</Badge>
           <Badge variant="outline" className="px-3 py-1">{myPatients.length} Patients</Badge>
         </div>
@@ -174,7 +188,14 @@ export default function DoctorDashboard() {
       <Tabs defaultValue="patients" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-2 md:grid-cols-5 mb-8">
           <TabsTrigger value="patients">Patient List</TabsTrigger>
-          <TabsTrigger value="appointments">Appointments ({pendingAppointments.length})</TabsTrigger>
+          <TabsTrigger value="appointments" className="relative">
+            Appointments
+            {(emergencyAppointments.length + regularAppointments.length) > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-white">
+                {emergencyAppointments.length + regularAppointments.length}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="ai-assistant" className="gap-2">
             <Sparkles className="h-4 w-4" /> AI Tool
           </TabsTrigger>
@@ -398,46 +419,80 @@ export default function DoctorDashboard() {
         </TabsContent>
 
         <TabsContent value="appointments">
-          <Card>
-            <CardHeader>
-              <CardTitle>Appointment Requests</CardTitle>
-              <CardDescription>Review and approve pending patient consultations</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <div className="space-y-8">
+            {emergencyAppointments.length > 0 && (
               <div className="space-y-4">
-                {pendingAppointments.map(appt => {
-                  const patient = users.find(u => u.id === appt.patientId);
-                  return (
-                    <div key={appt.id} className="flex items-center justify-between p-4 border rounded-xl bg-card shadow-sm">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
-                          {patient?.name.charAt(0)}
+                <div className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  <h3 className="text-lg font-bold tracking-tight">HIGH PRIORITY EMERGENCY REQUESTS</h3>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  {emergencyAppointments.map(appt => {
+                    const patient = users.find(u => u.id === appt.patientId);
+                    return (
+                      <div key={appt.id} className="flex items-center justify-between p-4 border-2 border-destructive bg-destructive/5 rounded-xl shadow-md animate-pulse">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center font-bold text-destructive">
+                            {patient?.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-bold text-destructive">{patient?.name}</p>
+                            <p className="text-xs font-medium text-destructive/70">REQUESTED: {format(new Date(appt.date), "h:mm a")}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold">{patient?.name}</p>
-                          <p className="text-xs text-muted-foreground">{format(new Date(appt.date), "MMMM d, yyyy 'at' h:mm a")}</p>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="destructive" onClick={() => approveAppointment(appt.id)}>
+                            Prioritize
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => approveAppointment(appt.id)}>
-                          Approve
-                        </Button>
-                        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">
-                          Deny
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {pendingAppointments.length === 0 && (
-                  <div className="text-center py-20 text-muted-foreground">
-                    <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                    <p>No pending requests.</p>
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Appointment Requests</CardTitle>
+                <CardDescription>Review and approve pending patient consultations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {regularAppointments.map(appt => {
+                    const patient = users.find(u => u.id === appt.patientId);
+                    return (
+                      <div key={appt.id} className="flex items-center justify-between p-4 border rounded-xl bg-card shadow-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                            {patient?.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-semibold">{patient?.name}</p>
+                            <p className="text-xs text-muted-foreground">{format(new Date(appt.date), "MMMM d, yyyy 'at' h:mm a")}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => approveAppointment(appt.id)}>
+                            Approve
+                          </Button>
+                          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">
+                            Deny
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {regularAppointments.length === 0 && emergencyAppointments.length === 0 && (
+                    <div className="text-center py-20 text-muted-foreground">
+                      <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                      <p>No pending requests.</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="ai-assistant">

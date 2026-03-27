@@ -21,7 +21,8 @@ import {
   X,
   Edit,
   Trash2,
-  Eye
+  Eye,
+  AlertTriangle
 } from "lucide-react";
 import { ChatModule } from "@/components/dashboard/ChatModule";
 import { useState, useRef, useMemo } from "react";
@@ -99,6 +100,23 @@ export default function PatientDashboard() {
       bookAppointment(assignedDoctor.id, apptDate);
       setApptDate("");
       toast({ title: "Appointment Requested", description: "Waiting for doctor approval." });
+    }
+  };
+
+  const handleEmergencyRequest = () => {
+    if (assignedDoctor) {
+      bookAppointment(assignedDoctor.id, new Date().toISOString(), true);
+      toast({ 
+        variant: "destructive",
+        title: "Emergency Requested", 
+        description: "Your doctor has been notified of this high-priority request." 
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "No Doctor Connected",
+        description: "Please connect with a doctor before requesting emergency attention."
+      });
     }
   };
 
@@ -184,7 +202,7 @@ export default function PatientDashboard() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="border-none shadow-md">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -198,6 +216,7 @@ export default function PatientDashboard() {
                     <p className="font-semibold text-xl">{format(new Date(myAppointments[0].date), "MMM d, h:mm a")}</p>
                     <Badge className={myAppointments[0].status === "approved" ? "bg-green-500" : "bg-yellow-500"}>
                       {myAppointments[0].status.toUpperCase()}
+                      {myAppointments[0].isEmergency && " (EMERGENCY)"}
                     </Badge>
                   </div>
                 ) : (
@@ -221,9 +240,29 @@ export default function PatientDashboard() {
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-md">
+            <Card className="border-destructive/20 bg-destructive/5 shadow-md">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  Emergency
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-[10px] text-muted-foreground mb-3">Request immediate attention from your doctor.</p>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  className="w-full gap-2 font-bold"
+                  onClick={handleEmergencyRequest}
+                >
+                  Priority Visit
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-md">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2 text-muted-foreground">
                   <AlertCircle className="h-5 w-5" />
                   Report Issue
                 </CardTitle>
@@ -231,12 +270,12 @@ export default function PatientDashboard() {
               <CardContent>
                 <form onSubmit={handleReportIssue} className="space-y-2">
                   <Input 
-                    placeholder="Briefly describe the issue..." 
+                    placeholder="Briefly describe..." 
                     value={issue} 
                     onChange={(e) => setIssue(e.target.value)}
-                    className="h-8 text-xs"
+                    className="h-8 text-[10px]"
                   />
-                  <Button type="submit" size="sm" variant="destructive" className="w-full">Submit</Button>
+                  <Button type="submit" size="sm" variant="outline" className="w-full text-[10px] h-7">Submit to Admin</Button>
                 </form>
               </CardContent>
             </Card>
@@ -333,7 +372,10 @@ export default function PatientDashboard() {
                 {myAppointments.filter(a => a.status === "visited").map(appt => (
                   <div key={appt.id} className="p-4 border rounded-lg hover:bg-muted/30 transition-colors">
                     <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold text-primary">{format(new Date(appt.date), "MMMM d, yyyy")}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-primary">{format(new Date(appt.date), "MMMM d, yyyy")}</h4>
+                        {appt.isEmergency && <Badge variant="destructive" className="text-[8px] h-4">EMERGENCY</Badge>}
+                      </div>
                       <Badge variant="outline">VISITED</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">Consultation with {assignedDoctor?.name}</p>
