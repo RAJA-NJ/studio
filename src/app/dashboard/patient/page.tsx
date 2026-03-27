@@ -24,7 +24,7 @@ import {
   Eye
 } from "lucide-react";
 import { ChatModule } from "@/components/dashboard/ChatModule";
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -74,15 +74,15 @@ export default function PatientDashboard() {
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [editingReport, setEditingReport] = useState<Report | null>(null);
 
-  const assignedDoctor = users.find(u => u.id === currentUser?.doctorId);
-  const myAppointments = appointments.filter(a => a.patientId === currentUser?.id);
-  const myReports = reports.filter(r => r.patientId === currentUser?.id);
+  const assignedDoctor = useMemo(() => users.find(u => u.id === currentUser?.doctorId), [users, currentUser]);
+  const myAppointments = useMemo(() => appointments.filter(a => a.patientId === currentUser?.id), [appointments, currentUser]);
+  const myReports = useMemo(() => reports.filter(r => r.patientId === currentUser?.id), [reports, currentUser]);
   
-  const filteredDoctors = users.filter(u => 
+  const filteredDoctors = useMemo(() => users.filter(u => 
     u.role === "doctor" && 
     (u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
      u.specialization?.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  ), [users, searchQuery]);
 
   const handleReportIssue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,8 +143,9 @@ export default function PatientDashboard() {
     toast({ title: "Record Updated", description: "The medical record has been updated." });
   };
 
-  const handleDeleteReport = (id: string) => {
-    if (confirm("Are you sure you want to delete this record?")) {
+  const handleDeleteReport = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this record? This action cannot be undone.")) {
       deleteReport(id);
       toast({ title: "Record Deleted", description: "The record has been permanently removed." });
     }
@@ -463,7 +464,7 @@ export default function PatientDashboard() {
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingReport(report)}>
                           <Edit className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => handleDeleteReport(report.id)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={(e) => handleDeleteReport(report.id, e)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>

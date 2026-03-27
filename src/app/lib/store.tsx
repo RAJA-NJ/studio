@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 
 export type Role = "admin" | "doctor" | "patient";
 
@@ -125,61 +125,62 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, [users, appointments, reports, adminIssues, messages, currentUser, isLoaded]);
 
-  const login = (username: string, password: string, role: Role) => {
+  const login = useCallback((username: string, password: string, role: Role) => {
     const user = users.find(u => u.username === username && u.password === password && u.role === role);
     if (user) {
       setCurrentUser(user);
       return true;
     }
     return false;
-  };
+  }, [users]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setCurrentUser(null);
-  };
+  }, []);
 
-  const updateProfile = (data: Partial<User>) => {
+  const updateProfile = useCallback((data: Partial<User>) => {
     if (!currentUser) return;
-    setUsers(prev => prev.map(u => u.id === currentUser.id ? { ...u, ...data } : u));
-    setCurrentUser(prev => prev ? { ...prev, ...data } : null);
-  };
+    const updatedUser = { ...currentUser, ...data };
+    setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
+    setCurrentUser(updatedUser);
+  }, [currentUser]);
 
-  const createDoctor = (doc: Omit<User, "id" | "role">) => {
+  const createDoctor = useCallback((doc: Omit<User, "id" | "role">) => {
     const newUser: User = { ...doc, id: `u-${Date.now()}`, role: "doctor" };
     setUsers(prev => [...prev, newUser]);
-  };
+  }, []);
 
-  const deleteDoctor = (id: string) => {
+  const deleteDoctor = useCallback((id: string) => {
     setUsers(prev => prev.filter(u => u.id !== id));
-  };
+  }, []);
 
-  const resetDoctorPassword = (id: string, newPass: string) => {
+  const resetDoctorPassword = useCallback((id: string, newPass: string) => {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, password: newPass } : u));
-  };
+  }, []);
 
-  const createPatient = (pat: Omit<User, "id" | "role" | "doctorId">) => {
+  const createPatient = useCallback((pat: Omit<User, "id" | "role" | "doctorId">) => {
     if (!currentUser || currentUser.role !== "doctor") return;
     const newUser: User = { ...pat, id: `u-${Date.now()}`, role: "patient", doctorId: currentUser.id };
     setUsers(prev => [...prev, newUser]);
-  };
+  }, [currentUser]);
 
-  const deletePatient = (id: string) => {
+  const deletePatient = useCallback((id: string) => {
     setUsers(prev => prev.filter(u => u.id !== id));
-  };
+  }, []);
 
-  const updatePatientPassword = (id: string, newPass: string) => {
+  const updatePatientPassword = useCallback((id: string, newPass: string) => {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, password: newPass } : u));
-  };
+  }, []);
 
-  const approveAppointment = (id: string) => {
+  const approveAppointment = useCallback((id: string) => {
     setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: "approved" } : a));
-  };
+  }, []);
 
-  const markVisited = (id: string, notes: string) => {
+  const markVisited = useCallback((id: string, notes: string) => {
     setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: "visited", notes } : a));
-  };
+  }, []);
 
-  const uploadFileForPatient = (patientId: string, title: string, fileUrl: string, type: "scan" | "prescription") => {
+  const uploadFileForPatient = useCallback((patientId: string, title: string, fileUrl: string, type: "scan" | "prescription") => {
     if (!currentUser) return;
     
     let doctorId = '';
@@ -199,17 +200,17 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       type
     };
     setReports(prev => [...prev, newReport]);
-  };
+  }, [currentUser]);
 
-  const deleteReport = (id: string) => {
+  const deleteReport = useCallback((id: string) => {
     setReports(prev => prev.filter(r => r.id !== id));
-  };
+  }, []);
 
-  const updateReport = (id: string, data: Partial<Report>) => {
+  const updateReport = useCallback((id: string, data: Partial<Report>) => {
     setReports(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
-  };
+  }, []);
 
-  const bookAppointment = (doctorId: string, date: string) => {
+  const bookAppointment = useCallback((doctorId: string, date: string) => {
     if (!currentUser) return;
     const newAppt: Appointment = {
       id: `a-${Date.now()}`,
@@ -219,9 +220,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       status: "pending"
     };
     setAppointments(prev => [...prev, newAppt]);
-  };
+  }, [currentUser]);
 
-  const reportIssueToAdmin = (description: string) => {
+  const reportIssueToAdmin = useCallback((description: string) => {
     if (!currentUser) return;
     const newIssue: AdminIssue = {
       id: `i-${Date.now()}`,
@@ -230,9 +231,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       date: new Date().toISOString()
     };
     setAdminIssues(prev => [...prev, newIssue]);
-  };
+  }, [currentUser]);
 
-  const sendMessage = (toId: string, text: string) => {
+  const sendMessage = useCallback((toId: string, text: string) => {
     if (!currentUser) return;
     const newMessage: Message = {
       id: `m-${Date.now()}`,
@@ -242,15 +243,22 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString()
     };
     setMessages(prev => [...prev, newMessage]);
-  };
+  }, [currentUser]);
+
+  const value = useMemo(() => ({
+    isLoaded, users, appointments, reports, adminIssues, messages, currentUser,
+    login, logout, updateProfile, createDoctor, deleteDoctor, resetDoctorPassword,
+    createPatient, deletePatient, updatePatientPassword, approveAppointment,
+    markVisited, uploadFileForPatient, deleteReport, updateReport, bookAppointment, reportIssueToAdmin, sendMessage
+  }), [
+    isLoaded, users, appointments, reports, adminIssues, messages, currentUser,
+    login, logout, updateProfile, createDoctor, deleteDoctor, resetDoctorPassword,
+    createPatient, deletePatient, updatePatientPassword, approveAppointment,
+    markVisited, uploadFileForPatient, deleteReport, updateReport, bookAppointment, reportIssueToAdmin, sendMessage
+  ]);
 
   return (
-    <AppStoreContext.Provider value={{
-      isLoaded, users, appointments, reports, adminIssues, messages, currentUser,
-      login, logout, updateProfile, createDoctor, deleteDoctor, resetDoctorPassword,
-      createPatient, deletePatient, updatePatientPassword, approveAppointment,
-      markVisited, uploadFileForPatient, deleteReport, updateReport, bookAppointment, reportIssueToAdmin, sendMessage
-    }}>
+    <AppStoreContext.Provider value={value}>
       {children}
     </AppStoreContext.Provider>
   );
