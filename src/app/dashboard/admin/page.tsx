@@ -17,9 +17,12 @@ import {
   Search,
   CheckCircle2,
   AlertTriangle,
-  Lock
+  Lock,
+  User as UserIcon,
+  Upload,
+  ShieldCheck
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -45,11 +48,13 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
   const { 
+    currentUser,
     users, 
     adminIssues, 
     createDoctor, 
     deleteDoctor, 
-    resetDoctorPassword 
+    resetDoctorPassword,
+    updateProfile 
   } = useAppStore();
   const { toast } = useToast();
 
@@ -62,6 +67,11 @@ export default function AdminDashboard() {
   const [resettingDoc, setResettingDoc] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [docToDelete, setDocToDelete] = useState<User | null>(null);
+
+  // Admin Profile State
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [adminNewPassword, setAdminNewPassword] = useState("");
+  const profilePicInputRef = useRef<HTMLInputElement>(null);
 
   const doctors = users.filter(u => u.role === "doctor");
   const patientsCount = users.filter(u => u.role === "patient").length;
@@ -95,6 +105,37 @@ export default function AdminDashboard() {
       });
       setDocToDelete(null);
     }
+  };
+
+  const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateProfile({ photo: reader.result as string });
+        toast({ title: "Profile Picture Updated" });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAdminPasswordChange = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    if (currentPassword !== currentUser.password) {
+      toast({ 
+        variant: "destructive", 
+        title: "Update Failed", 
+        description: "The current password you entered is incorrect." 
+      });
+      return;
+    }
+
+    updateProfile({ password: adminNewPassword });
+    setCurrentPassword("");
+    setAdminNewPassword("");
+    toast({ title: "Security Updated", description: "Your admin password has been changed successfully." });
   };
 
   return (
@@ -140,10 +181,11 @@ export default function AdminDashboard() {
       </div>
 
       <Tabs defaultValue="doctors" className="w-full">
-        <TabsList className="grid grid-cols-3 mb-8">
+        <TabsList className="grid grid-cols-4 mb-8">
           <TabsTrigger value="doctors">Doctor Management</TabsTrigger>
           <TabsTrigger value="issues">Issue Reports ({adminIssues.length})</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="profile">Admin Profile</TabsTrigger>
         </TabsList>
 
         <TabsContent value="doctors" className="space-y-6">
@@ -308,15 +350,99 @@ export default function AdminDashboard() {
             </Card>
           </div>
         </TabsContent>
+
+        <TabsContent value="profile">
+          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Card className="md:col-span-1 h-fit">
+              <CardHeader>
+                <CardTitle className="text-lg">Identity</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center gap-6">
+                <div className="relative group">
+                  <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center overflow-hidden border-4 border-card shadow-xl">
+                    {currentUser?.photo ? (
+                      <img src={currentUser.photo} className="w-full h-full object-cover" />
+                    ) : (
+                      <ShieldCheck className="h-16 w-16 text-primary/40" />
+                    )}
+                  </div>
+                  <input 
+                    type="file" 
+                    ref={profilePicInputRef} 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleProfilePicChange}
+                  />
+                  <button 
+                    onClick={() => profilePicInputRef.current?.click()}
+                    className="absolute bottom-1 right-1 p-2 bg-primary text-white rounded-full shadow-lg hover:bg-primary/90 transition-all scale-90 group-hover:scale-100"
+                  >
+                    <Upload className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="text-center space-y-1">
+                  <h3 className="text-xl font-bold">{currentUser?.name}</h3>
+                  <Badge variant="secondary" className="uppercase tracking-tighter">System Administrator</Badge>
+                  <p className="text-xs text-muted-foreground pt-2">Admin ID: {currentUser?.username}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lock className="h-5 w-5 text-primary" />
+                  Account Security
+                </CardTitle>
+                <CardDescription>Update your personal administrator credentials.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleAdminPasswordChange} className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="current-pass">Current Password</Label>
+                      <Input 
+                        id="current-pass" 
+                        type="password" 
+                        placeholder="Confirm identity to change password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-new-pass">New Secure Password / Unique ID</Label>
+                      <Input 
+                        id="admin-new-pass" 
+                        type="password" 
+                        placeholder="Enter your new security code"
+                        value={adminNewPassword}
+                        onChange={(e) => setAdminNewPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full gap-2">
+                    Update Security Credentials
+                  </Button>
+                </form>
+              </CardContent>
+              <CardFooter className="border-t bg-muted/20 text-[10px] text-muted-foreground p-4">
+                <AlertTriangle className="h-3 w-3 mr-2 inline" />
+                Changing the admin password will affect all future logins for this session ID.
+              </CardFooter>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
 
-      {/* Reset Password Dialog */}
+      {/* Reset Doctor Password Dialog */}
       <Dialog open={!!resettingDoc} onOpenChange={(open) => !open && setResettingDoc(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5" />
-              Reset Password
+              Reset Doctor Password
             </DialogTitle>
             <DialogDescription>
               Assign a new temporary password for <strong>{resettingDoc?.name}</strong>.
