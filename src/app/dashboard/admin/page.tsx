@@ -31,6 +31,16 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
@@ -48,9 +58,10 @@ export default function AdminDashboard() {
   const [docPass, setDocPass] = useState("");
   const [docSpec, setDocSpec] = useState("");
 
-  // Password reset state
+  // Management state
   const [resettingDoc, setResettingDoc] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  const [docToDelete, setDocToDelete] = useState<User | null>(null);
 
   const doctors = users.filter(u => u.role === "doctor");
   const patientsCount = users.filter(u => u.role === "patient").length;
@@ -72,6 +83,17 @@ export default function AdminDashboard() {
       });
       setResettingDoc(null);
       setNewPassword("");
+    }
+  };
+
+  const confirmDeleteDoctor = () => {
+    if (docToDelete) {
+      deleteDoctor(docToDelete.id);
+      toast({ 
+        title: "Doctor Removed", 
+        description: `${docToDelete.name}'s access has been revoked.` 
+      });
+      setDocToDelete(null);
     }
   };
 
@@ -186,7 +208,12 @@ export default function AdminDashboard() {
                           <Button variant="outline" size="sm" onClick={() => setResettingDoc(doc)}>
                             <Key className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => deleteDoctor(doc.id)}>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-destructive hover:bg-destructive/10" 
+                            onClick={() => setDocToDelete(doc)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </td>
@@ -315,6 +342,24 @@ export default function AdminDashboard() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Doctor Confirmation Alert */}
+      <AlertDialog open={!!docToDelete} onOpenChange={(open) => !open && setDocToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke Doctor Access?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the account for <strong>{docToDelete?.name}</strong>. The doctor will no longer be able to access the portal. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteDoctor} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
