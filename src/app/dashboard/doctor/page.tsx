@@ -25,7 +25,8 @@ import {
   Eye,
   Edit,
   File as FileIcon,
-  AlertTriangle
+  AlertTriangle,
+  User as UserIcon
 } from "lucide-react";
 import { useState, useRef, useMemo } from "react";
 import { format } from "date-fns";
@@ -97,6 +98,7 @@ export default function DoctorDashboard() {
   const [reportToDelete, setReportToDelete] = useState<string | null>(null);
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
+  const profilePicInputRef = useRef<HTMLInputElement>(null);
 
   const myPatients = useMemo(() => users.filter(u => u.role === "patient" && u.doctorId === currentUser?.id), [users, currentUser]);
   
@@ -164,6 +166,18 @@ export default function DoctorDashboard() {
   const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setEditSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateProfile({ photo: reader.result as string });
+        toast({ title: "Profile Picture Updated" });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -606,6 +620,35 @@ export default function DoctorDashboard() {
               <CardDescription>Manage your practice details and account</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+               <div className="flex items-center gap-6 mb-4">
+                  <div className="relative group">
+                    <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center overflow-hidden border-4 border-card shadow-lg">
+                      {currentUser?.photo ? (
+                        <img src={currentUser.photo} className="w-full h-full object-cover" />
+                      ) : (
+                        <UserIcon className="h-12 w-12 text-muted-foreground" />
+                      )}
+                    </div>
+                    <input 
+                      type="file" 
+                      ref={profilePicInputRef} 
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={handleProfilePicChange}
+                    />
+                    <button 
+                      onClick={() => profilePicInputRef.current?.click()}
+                      className="absolute bottom-0 right-0 p-1.5 bg-primary text-white rounded-full shadow-md hover:bg-primary/90 transition-colors"
+                    >
+                      <Upload className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-bold">{currentUser?.name}</h3>
+                    <p className="text-sm text-muted-foreground">{currentUser?.specialization}</p>
+                  </div>
+               </div>
+
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Full Name</Label>

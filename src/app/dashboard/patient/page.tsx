@@ -80,6 +80,7 @@ export default function PatientDashboard() {
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
+  const profilePicInputRef = useRef<HTMLInputElement>(null);
 
   // Management State
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
@@ -140,6 +141,18 @@ export default function PatientDashboard() {
   const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setEditSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateProfile({ photo: reader.result as string });
+        toast({ title: "Profile Picture Updated" });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -560,7 +573,17 @@ export default function PatientDashboard() {
                       <UserIcon className="h-12 w-12 text-muted-foreground" />
                     )}
                   </div>
-                  <button className="absolute bottom-0 right-0 p-1 bg-primary text-white rounded-full shadow-md">
+                  <input 
+                    type="file" 
+                    ref={profilePicInputRef} 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleProfilePicChange}
+                  />
+                  <button 
+                    onClick={() => profilePicInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 p-1.5 bg-primary text-white rounded-full shadow-md hover:bg-primary/90 transition-colors"
+                  >
                     <Upload className="h-4 w-4" />
                   </button>
                 </div>
