@@ -1,4 +1,4 @@
-# MedConnect - Medical Practice Management System
+# an Intelligent Health Support System (IHSS)
 
 A comprehensive web application designed to streamline medical practice management with role-based access for patients, doctors, and administrators. The platform facilitates appointment booking, secure messaging, medical record sharing, and patient management with strict doctor-patient assignment.
 
